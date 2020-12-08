@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:file_image/image_list_page.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -37,7 +38,7 @@ class MyApp extends StatelessWidget {
         // closer together (more dense) than on mobile platforms.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Flutter Demo Home Page')
     );
   }
 }
@@ -61,6 +62,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  List<String> localPaths = [];
   bool isLoading = false;
   bool offlineMode = false;
   String offlineUrlTemp;
@@ -83,11 +85,14 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     for (final tile in sourceCoords) {
       final savePath =
-          join(directory.path, '${tile.z}/${tile.x}/${tile.y}.jpg');
+          join(directory.path, '${tile.z}_${tile.x}_${tile.y}.jpg');
       final url =
           'https://api.maptiler.com/maps/hybrid/256/${tile.z}/${tile.x}/${tile.y}@2x.jpg?key=S8sd6NmKlFwwJSxgnvEd';
       await dio.download(url, savePath, onReceiveProgress: (received, total) {
         print('Task $url, progress: ${(received / total * 100)}%');
+        if (received == total) {
+          localPaths.add(savePath);
+        }
       });
     }
 
@@ -101,7 +106,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     getApplicationDocumentsDirectory().then((value) {
-      offlineUrlTemp = join(value.path, '{z}/{x}/{y}.jpg');
+      offlineUrlTemp = join(value.path, '{z}_{x}_{y}.jpg');
     });
   }
 
@@ -141,15 +146,26 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           Align(
             alignment: Alignment.bottomLeft,
-            child: FlatButton(
-              color: Colors.green,
-              child: Text('useMemoryImage'),
-              onPressed: () {
-                setState(() {
-                  useMemoryImage = true;
-                  print('change');
-                });
-              },
+            child: Wrap(
+              direction: Axis.vertical,
+              children: [
+                FlatButton(
+                  color: Colors.green,
+                    onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                    return ImageListPage(imagePath: localPaths);
+                  }));
+                }, child: Text('show list')),
+                FlatButton(
+                  color: Colors.green,
+                  child: Text('useMemoryImage'),
+                  onPressed: () {
+                    setState(() {
+                      useMemoryImage = true;
+                    });
+                  },
+                )
+              ],
             ),
           )
         ],
@@ -172,7 +188,7 @@ class FileTileProvider extends TileProvider {
   ImageProvider getImage(Coords<num> coords, TileLayerOptions options) {
     final url = getTileUrl(coords, options);
     final file = File(url);
-    if (useMemoryImage) {
+    if (file.existsSync() && useMemoryImage) {
       Uint8List bytes = file.readAsBytesSync();
       return MemoryImage(bytes);
     }
