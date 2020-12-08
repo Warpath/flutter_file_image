@@ -170,10 +170,10 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FlatButton(
         onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
+        color: Colors.red,
+        child: Text('download map tiles'),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
